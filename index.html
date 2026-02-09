@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant-Abrechnung</title>
+    <title>Restaurant-Guthaben</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; color: #1c1e21; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; text-align: center; }
-        .input-group { margin: 20px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #606770; }
-        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.1em; box-sizing: border-box; margin-bottom: 10px; }
-        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; font-weight: bold; }
+        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; text-align: center; font-size: 1.4em; }
         .total-card { background: #007bff; color: white; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
-        .total-amount { font-size: 2em; font-weight: bold; }
-        .user-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; }
+        .total-amount { font-size: 2.2em; font-weight: bold; }
+        .input-group { margin: 20px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #606770; font-size: 0.9em; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px; }
+        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
+        .user-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; }
         .name { font-weight: bold; }
+        .status-msg { font-size: 0.8em; text-align: center; color: #888; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -23,7 +24,7 @@
         <h1>Guthaben Rechner</h1>
         
         <div class="total-card">
-            <div>Restliches Restaurant-Guthaben:</div>
+            <div>Rest-Guthaben:</div>
             <div class="total-amount" id="restGuthaben">150.000</div>
             <div>HUF</div>
         </div>
@@ -38,23 +39,23 @@
             </select>
 
             <label>Betrag (HUF):</label>
-            <input type="number" id="betragInput" placeholder="Betrag eingeben...">
-            <button onclick="saveData()">Einzahlung speichern</button>
+            <input type="number" id="betragInput" placeholder="Zahl eingeben..." inputmode="numeric">
+            <button onclick="saveData()">Speichern</button>
         </div>
 
         <div id="details">
-            <p><strong>Bisherige Einzahlungen:</strong></p>
+            <p><strong>Einzel-Einzahlungen:</strong></p>
             <div id="userList"></div>
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="text-align:center; font-size: 0.8em; color: #666;">Projekt Kosten-Übersicht 2026</p>
+        <p class="status-msg">Daten werden live mit Firebase synchronisiert.</p>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // Deine geprüften Config-Daten
         const firebaseConfig = {
             apiKey: "AIzaSyAmJbQpCAPz1T_b3H18lPFbqJ11UB9Ou48",
             authDomain: "essenskosten.firebaseapp.com",
@@ -68,6 +69,7 @@
 
         const START_GUTHABEN = 150000;
 
+        // Daten laden und Rechnen
         onValue(kassenRef, (snapshot) => {
             const data = snapshot.val() || {};
             const userList = document.getElementById('userList');
@@ -82,20 +84,28 @@
                 
                 const div = document.createElement('div');
                 div.className = 'user-row';
-                div.innerHTML = `<span class="name">${user}:</span> <span>${betrag.toLocaleString()} HUF</span>`;
+                div.innerHTML = `<span class="name">${user}:</span> <span>${betrag.toLocaleString('de-DE')} HUF</span>`;
                 userList.appendChild(div);
             });
 
             const rest = START_GUTHABEN - gesamtEinzahlungen;
-            document.getElementById('restGuthaben').innerText = rest.toLocaleString();
+            document.getElementById('restGuthaben').innerText = rest.toLocaleString('de-DE');
         });
 
+        // Speicher-Funktion
         window.saveData = function() {
             const user = document.getElementById('userSelect').value;
             const betrag = document.getElementById('betragInput').value;
-            if(betrag) {
-                set(ref(db, 'haushalt/restaurant/' + user), betrag);
-                document.getElementById('betragInput').value = "";
+            
+            if(betrag && betrag > 0) {
+                // Wir speichern den Wert direkt unter dem Namen des Nutzers
+                set(ref(db, 'haushalt/restaurant/' + user), betrag)
+                .then(() => {
+                    document.getElementById('betragInput').value = "";
+                })
+                .catch((error) => alert("Fehler beim Speichern: " + error.message));
+            } else {
+                alert("Bitte einen gültigen Betrag eingeben.");
             }
         }
     </script>
