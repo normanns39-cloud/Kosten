@@ -3,44 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Haushaltskasse - Rosi & Co</title>
+    <title>Restaurant-Abrechnung</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; color: #1c1e21; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; }
-        .input-group { margin: 20px 0; }
+        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; text-align: center; }
+        .input-group { margin: 20px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #606770; }
         select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.1em; box-sizing: border-box; margin-bottom: 10px; }
         button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; font-weight: bold; }
-        button:hover { background: #218838; }
-        .user-display { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 5px solid #007bff; display: flex; justify-content: space-between; align-items: center; }
-        .name { font-weight: bold; font-size: 1.1em; }
-        .amount { font-size: 1.3em; font-weight: bold; color: #007bff; }
+        .total-card { background: #007bff; color: white; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .total-amount { font-size: 2em; font-weight: bold; }
+        .user-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; }
+        .name { font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>Haushaltskasse</h1>
+        <h1>Guthaben Rechner</h1>
         
+        <div class="total-card">
+            <div>Restliches Restaurant-Guthaben:</div>
+            <div class="total-amount" id="restGuthaben">150.000</div>
+            <div>HUF</div>
+        </div>
+
         <div class="input-group">
-            <label>Wer trägt ein?</label>
+            <label>Wer zahlt ein?</label>
             <select id="userSelect">
                 <option value="Rosi">Rosi</option>
-                <option value="Ich">Ich</option>
-                <option value="Allgemein">Allgemein</option>
+                <option value="Anki">Anki</option>
+                <option value="Norman">Norman</option>
+                <option value="André">André</option>
             </select>
 
             <label>Betrag (HUF):</label>
-            <input type="number" id="guthabenInput" placeholder="Betrag eingeben...">
-            <button onclick="saveData()">Betrag Speichern</button>
+            <input type="number" id="betragInput" placeholder="Betrag eingeben...">
+            <button onclick="saveData()">Einzahlung speichern</button>
         </div>
 
-        <div id="displayArea">
-            <p><strong>Aktuelle Stände:</strong></p>
-            </div>
+        <div id="details">
+            <p><strong>Bisherige Einzahlungen:</strong></p>
+            <div id="userList"></div>
+        </div>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 0.85em; color: #606770;">Projekt: Kosten-Übersicht 2026</p>
+        <p style="text-align:center; font-size: 0.8em; color: #666;">Projekt Kosten-Übersicht 2026</p>
     </div>
 
     <script type="module">
@@ -56,31 +64,38 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const kassenRef = ref(db, 'haushalt/kasse');
+        const kassenRef = ref(db, 'haushalt/restaurant');
 
-        // Daten für alle Benutzer live laden
+        const START_GUTHABEN = 150000;
+
         onValue(kassenRef, (snapshot) => {
             const data = snapshot.val() || {};
-            const displayArea = document.getElementById('displayArea');
-            // Bereich leeren außer der Überschrift
-            displayArea.innerHTML = '<p><strong>Aktuelle Stände:</strong></p>';
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';
             
-            for (let user in data) {
+            let gesamtEinzahlungen = 0;
+            const users = ["Rosi", "Anki", "Norman", "André"];
+            
+            users.forEach(user => {
+                const betrag = parseInt(data[user] || 0);
+                gesamtEinzahlungen += betrag;
+                
                 const div = document.createElement('div');
-                div.className = 'user-display';
-                div.innerHTML = `<span class="name">${user}:</span> <span class="amount">${data[user]} HUF</span>`;
-                displayArea.appendChild(div);
-            }
+                div.className = 'user-row';
+                div.innerHTML = `<span class="name">${user}:</span> <span>${betrag.toLocaleString()} HUF</span>`;
+                userList.appendChild(div);
+            });
+
+            const rest = START_GUTHABEN - gesamtEinzahlungen;
+            document.getElementById('restGuthaben').innerText = rest.toLocaleString();
         });
 
-        // Daten speichern
         window.saveData = function() {
             const user = document.getElementById('userSelect').value;
-            const newValue = document.getElementById('guthabenInput').value;
-            if(newValue) {
-                set(ref(db, 'haushalt/kasse/' + user), newValue);
-                document.getElementById('guthabenInput').value = "";
-                alert("Gespeichert für " + user);
+            const betrag = document.getElementById('betragInput').value;
+            if(betrag) {
+                set(ref(db, 'haushalt/restaurant/' + user), betrag);
+                document.getElementById('betragInput').value = "";
             }
         }
     </script>
