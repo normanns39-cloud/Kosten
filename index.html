@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant-Guthaben</title>
+    <title>Restaurant-Abrechnung</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; color: #1c1e21; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -13,10 +13,10 @@
         .input-group { margin: 20px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #606770; font-size: 0.9em; }
         select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px; }
-        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
+        .btn-save { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
         .user-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; }
         .name { font-weight: bold; }
-        .status-msg { font-size: 0.8em; text-align: center; color: #888; margin-top: 15px; }
+        .btn-reset { margin-top: 30px; background: none; border: none; color: #ccc; cursor: pointer; font-size: 0.7em; width: 100%; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -40,22 +40,21 @@
 
             <label>Betrag (HUF):</label>
             <input type="number" id="betragInput" placeholder="Zahl eingeben..." inputmode="numeric">
-            <button onclick="saveData()">Speichern</button>
+            <button class="btn-save" onclick="saveData()">Einzahlung hinzufügen</button>
         </div>
 
         <div id="details">
-            <p><strong>Einzel-Einzahlungen:</strong></p>
+            <p><strong>Bisherige Gesamtsummen:</strong></p>
             <div id="userList"></div>
         </div>
 
-        <p class="status-msg">Daten werden live mit Firebase synchronisiert.</p>
+        <button class="btn-reset" onclick="resetAll()">Daten für neuen Monat löschen</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Deine geprüften Config-Daten
         const firebaseConfig = {
             apiKey: "AIzaSyAmJbQpCAPz1T_b3H18lPFbqJ11UB9Ou48",
             authDomain: "essenskosten.firebaseapp.com",
@@ -69,7 +68,7 @@
 
         const START_GUTHABEN = 150000;
 
-        // Daten laden und Rechnen
+        // Daten live anzeigen & Rechnen
         onValue(kassenRef, (snapshot) => {
             const data = snapshot.val() || {};
             const userList = document.getElementById('userList');
@@ -92,20 +91,29 @@
             document.getElementById('restGuthaben').innerText = rest.toLocaleString('de-DE');
         });
 
-        // Speicher-Funktion
+        // Funktion zum Addieren
         window.saveData = function() {
             const user = document.getElementById('userSelect').value;
-            const betrag = document.getElementById('betragInput').value;
+            const neuerBetrag = parseInt(document.getElementById('betragInput').value);
             
-            if(betrag && betrag > 0) {
-                // Wir speichern den Wert direkt unter dem Namen des Nutzers
-                set(ref(db, 'haushalt/restaurant/' + user), betrag)
-                .then(() => {
+            if(neuerBetrag && neuerBetrag > 0) {
+                const userRef = ref(db, 'haushalt/restaurant/' + user);
+                
+                runTransaction(userRef, (currentValue) => {
+                    const alterWert = parseInt(currentValue || 0);
+                    return alterWert + neuerBetrag;
+                }).then(() => {
                     document.getElementById('betragInput').value = "";
-                })
-                .catch((error) => alert("Fehler beim Speichern: " + error.message));
+                });
             } else {
-                alert("Bitte einen gültigen Betrag eingeben.");
+                alert("Bitte einen Betrag eingeben.");
+            }
+        }
+
+        // Alles auf Null setzen
+        window.resetAll = function() {
+            if(confirm("Möchtest du wirklich alle Einzahlungen löschen und von vorne beginnen?")) {
+                set(kassenRef, { Rosi: 0, Anki: 0, Norman: 0, André: 0 });
             }
         }
     </script>
