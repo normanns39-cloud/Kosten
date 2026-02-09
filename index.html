@@ -10,33 +10,57 @@
         h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; }
         .input-group { margin: 20px 0; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #606770; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.1em; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.1em; box-sizing: border-box; margin-bottom: 10px; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; }
+        button:hover { background: #0056b3; }
         .result { background: #e7f3ff; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; }
-        .amount { font-size: 1.5em; font-weight: bold; color: #007bff; }
+        .amount { font-size: 1.5em; font-weight: bold; color: #28a745; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>Haushaltskasse</h1>
-        
         <div class="input-group">
-            <label>Aktuelles Restaurant-Guthaben (HUF):</label>
-            <input type="number" id="guthaben" placeholder="Betrag eingeben..." oninput="updateView()">
+            <label>Restaurant-Guthaben (HUF):</label>
+            <input type="number" id="guthabenInput" placeholder="Neuen Betrag eingeben...">
+            <button onclick="saveData()">Speichern</button>
         </div>
-
         <div class="result">
-            <p>Verfügbarer Betrag:</p>
-            <span class="amount" id="display">0</span><span> HUF</span>
+            <p>Aktuell gespeichert:</p>
+            <span class="amount" id="display">Lade...</span><span> HUF</span>
         </div>
-
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <p style="font-size: 0.85em; color: #606770;">Die Shelly-Planung für den Herbst wird hier später ergänzt.</p>
+        <p style="font-size: 0.85em; color: #606770;">Heizung & Shelly folgen im Herbst.</p>
     </div>
 
-    <script>
-        function updateView() {
-            const val = document.getElementById('guthaben').value;
-            document.getElementById('display').innerText = val || 0;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmJbQpCAPz1T_b3H18lPFbqJ11UB9Ou48",
+            authDomain: "essenskosten.firebaseapp.com",
+            projectId: "essenskosten",
+            databaseURL: "https://essenskosten-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const guthabenRef = ref(db, 'restaurant/guthaben');
+
+        // Daten laden
+        onValue(guthabenRef, (snapshot) => {
+            const data = snapshot.val();
+            document.getElementById('display').innerText = data || 0;
+        });
+
+        // Daten speichern
+        window.saveData = function() {
+            const newValue = document.getElementById('guthabenInput').value;
+            if(newValue) {
+                set(guthabenRef, newValue);
+                document.getElementById('guthabenInput').value = "";
+            }
         }
     </script>
 </body>
