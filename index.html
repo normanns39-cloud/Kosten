@@ -8,17 +8,36 @@
         body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; color: #1c1e21; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
         h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-top: 0; }
-        .status { background: #e7f3ff; color: #007bff; padding: 5px 10px; border-radius: 5px; font-size: 0.9em; font-weight: bold; }
-        p { line-height: 1.5; }
+        .input-group { margin: 20px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #606770; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.1em; box-sizing: border-box; }
+        .result { background: #e7f3ff; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center; }
+        .amount { font-size: 1.5em; font-weight: bold; color: #007bff; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>Haushaltskasse</h1>
-        <p>Willkommen! Hier entsteht deine Übersicht für Ausgaben und das Restaurant-Guthaben.</p>
-        <p><span class="status">Status: In Arbeit</span></p>
+        
+        <div class="input-group">
+            <label>Aktuelles Restaurant-Guthaben (HUF):</label>
+            <input type="number" id="guthaben" placeholder="Betrag eingeben..." oninput="updateView()">
+        </div>
+
+        <div class="result">
+            <p>Verfügbarer Betrag:</p>
+            <span class="amount" id="display">0</span><span> HUF</span>
+        </div>
+
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         <p style="font-size: 0.85em; color: #606770;">Die Shelly-Planung für den Herbst wird hier später ergänzt.</p>
     </div>
+
+    <script>
+        function updateView() {
+            const val = document.getElementById('guthaben').value;
+            document.getElementById('display').innerText = val || 0;
+        }
+    </script>
 </body>
 </html>
